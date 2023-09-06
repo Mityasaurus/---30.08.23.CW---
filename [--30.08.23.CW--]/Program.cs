@@ -11,6 +11,7 @@ namespace ___30._08._23.CW___
     {
         private static DbProviderFactory factory;
         private static string connectionString => ConfigurationManager.ConnectionStrings["Default"].ToString();
+        private static Stopwatch timer = new Stopwatch();
         static async Task Main(string[] args)
         {
             try
@@ -39,11 +40,12 @@ namespace ___30._08._23.CW___
                 {
                     Console.WriteLine("Enter your choice");
 
-                    Console.WriteLine("1 - Показати усю iнформацiю");
+                    Console.WriteLine("1 - Показати всю iнформацiю");
                     Console.WriteLine("2 - Показати усiх студентiв");
                     Console.WriteLine("3 - Показати середнi оцiнки студентiв");
                     Console.WriteLine("4 - Показати студентiв з середньою оцiнкою вище вказаної");
                     Console.WriteLine("5 - Додати нового студента");
+                    Console.WriteLine("6 - Видалили iснуючого студента");
                     Console.WriteLine();
                     Console.WriteLine("0 - Вихiд");
 
@@ -54,73 +56,47 @@ namespace ___30._08._23.CW___
                     {
                         case 1: 
                             Console.Clear();
-                            Stopwatch timer = new Stopwatch();
-                            timer.Start();
+                            StartTimer();
                             await ReadDataAsync(factory, query);
-                            timer.Stop();
-
-                            Console.WriteLine($"Elapsed time: {timer.ElapsedMilliseconds}");
+                            Console.WriteLine($"\nElapsed time: {StopTimer()} ms");
                             break;
                         case 2:
                             Console.Clear();
                             string queryForCase2 = "SELECT Name, Lastname FROM Marks";
-                            timer = new Stopwatch();
-                            timer.Start();
+                            StartTimer();
                             await ReadDataAsync(factory, queryForCase2);
-                            timer.Stop();
-
-                            Console.WriteLine($"Elapsed time: {timer.ElapsedMilliseconds}");
+                            Console.WriteLine($"\nElapsed time: {StopTimer()} ms");
                             break;
                         case 3:
                             Console.Clear();
                             string queryForCase3 = "SELECT Average FROM Marks";
-                            timer = new Stopwatch();
-                            timer.Start();
+                            StartTimer();
                             await ReadDataAsync(factory, queryForCase3);
-                            timer.Stop();
-
-                            Console.WriteLine($"Elapsed time: {timer.ElapsedMilliseconds}");
+                            Console.WriteLine($"\nElapsed time: {StopTimer()} ms");
                             break;
                         case 4:
                             Console.Clear();
                             Console.WriteLine("Enter minimum acceptable mark");
                             double minMark = double.Parse(Console.ReadLine());
                             string queryWithFilter = $"select * from Marks where Average >= {minMark}";
-                            timer = new Stopwatch();
-                            timer.Start();
+                            StartTimer();
                             await ReadDataAsync(factory, queryWithFilter);
-                            timer.Stop();
-
-                            Console.WriteLine($"Elapsed time: {timer.ElapsedMilliseconds}");
+                            Console.WriteLine($"\nElapsed time: {StopTimer()} ms");
                             break;
-                        //case 5:
-                        //Console.Clear();
-
-                        //    Console.WriteLine("Enter name");
-                        //    string name = Console.ReadLine();
-
-                        //    Console.WriteLine("Enter lastname");
-                        //    string lastname = Console.ReadLine();
-
-                        //    Console.WriteLine("Enter group name");
-                        //    string group = Console.ReadLine();
-
-                        //    Console.WriteLine("Enter average mark");
-                        //    double average = double.Parse(Console.ReadLine());
-
-                        //    Console.WriteLine("Enter subject with min average mark");
-                        //    string minMarkSubject = Console.ReadLine();
-
-                        //    Console.WriteLine("Enter subject with max average mark");
-                        //    string maxMarkSubject = Console.ReadLine();
-
-                        //    string addQuery = $"insert into Marks values('{name}', '{lastname}', '{group}', {average}, '{minMarkSubject}', '{maxMarkSubject}')";
-
-                        //    using (SqlCommand cmd = new SqlCommand(addQuery, conn))
-                        //    {
-                        //        Console.WriteLine(cmd.ExecuteNonQuery());
-                        //    }
-                        //    break;
+                        case 5:
+                            Console.Clear();
+                            string addQuery = GetAddStudentQuery();
+                            StartTimer();
+                            await ExecCommandAsync(factory, addQuery);
+                            Console.WriteLine($"\nElapsed time: {StopTimer()} ms");
+                            break;
+                        case 6:
+                            Console.Clear();
+                            string deleteQuery = GetDeleteStudentQuery();
+                            StartTimer();
+                            await ExecCommandAsync(factory, deleteQuery);
+                            Console.WriteLine($"\nElapsed time: {StopTimer()} ms");
+                            break;
                         default:
                             break;
                     }
@@ -132,7 +108,18 @@ namespace ___30._08._23.CW___
             }
         }
 
-        private static async Task ReadDataAsync(DbProviderFactory factory, string query) //DbProviderFactory factory
+        private static void StartTimer()
+        {
+            timer.Reset();
+            timer.Start();
+        }
+        private static long StopTimer()
+        {
+            timer.Stop();
+            return timer.ElapsedMilliseconds;
+        }
+
+        private static async Task ReadDataAsync(DbProviderFactory factory, string query)
         {
             using (DbConnection conn = factory.CreateConnection())
             {
@@ -151,7 +138,7 @@ namespace ___30._08._23.CW___
                         {
                             Console.Write(reader.GetName(i).ToString().PadRight(20));
                         }
-                        Console.WriteLine();
+                        Console.WriteLine("\n");
                         while (reader.Read())
                         {
                             for(int i = 0; i < reader.FieldCount; i++)
@@ -162,56 +149,58 @@ namespace ___30._08._23.CW___
                         }
                     }
                 }
+
+                await conn.CloseAsync();
             }
         }
-        static void Classwork()
+        private static async Task ExecCommandAsync(DbProviderFactory factory, string query)
         {
-            string connectionString = "Data Source=Admin-PC\\SQLEXPRESS;Initial Catalog=Academy;Integrated Security=true;Connection Timeout=30;";
-
-            try
+            using(DbConnection conn = factory.CreateConnection())
             {
-                using (SqlConnection connection = new SqlConnection(connectionString))
+                conn.ConnectionString = connectionString;
+
+                await conn.OpenAsync();
+
+                using(DbCommand cmd = factory.CreateCommand())
                 {
-                    connection.Open();
-                    string query = "select * from Teachers";
-                    SqlDataAdapter adapter = new SqlDataAdapter(query, connection);
+                    cmd.Connection = conn;
+                    cmd.CommandText = query;
 
-                    DataSet ds = new DataSet();
-                    adapter.Fill(ds, "Teachers");
-                    foreach (DataRow row in ds.Tables["Teachers"].Rows)
-                    {
-                        Console.WriteLine(row["Name"]);
-                    }
-
-
-
-                    //Console.WriteLine(connection.ToString());
-                    //using (SqlCommand cmd = new SqlCommand(query, connection))
-                    //{
-                    //    using (var reader = cmd.ExecuteReader())
-                    //    {
-                    //        while (reader.Read())
-                    //        {
-                    //            Console.WriteLine($"{reader}");
-                    //        }
-                    //    }
-                    //}
-
-
-                    connection.Close();
-
+                    Console.WriteLine(cmd.ExecuteNonQuery());
                 }
-                //builder.DataSource = @"Admin-PC\SQLEXPRESS";
-                //builder.IntegratedSecurity = true;
-                //builder.InitialCatalog = "Academy";
-                //builder.UserID = "Mark";
-                //builder.Password = "123";
-                //Console.WriteLine(builder.ToString());
+
+                await conn.CloseAsync();
             }
-            catch (Exception ex)
-            {
-                Console.WriteLine(ex.Message);
-            }
+        }
+
+        private static string GetAddStudentQuery()
+        {
+            Console.WriteLine("Enter name");
+            string name = Console.ReadLine();
+
+            Console.WriteLine("Enter lastname");
+            string lastname = Console.ReadLine();
+
+            Console.WriteLine("Enter group name");
+            string group = Console.ReadLine();
+
+            Console.WriteLine("Enter average mark");
+            double average = double.Parse(Console.ReadLine());
+
+            Console.WriteLine("Enter subject with min average mark");
+            string minMarkSubject = Console.ReadLine();
+
+            Console.WriteLine("Enter subject with max average mark");
+            string maxMarkSubject = Console.ReadLine();
+
+            return $"insert into Marks values('{name}', '{lastname}', '{group}', {average}, '{minMarkSubject}', '{maxMarkSubject}')";
+        }
+        private static string GetDeleteStudentQuery()
+        {
+            Console.WriteLine("Enter the id of the student you want to delete");
+            string id = Console.ReadLine();
+
+            return $"delete from Marks where ID={id}";
         }
     }
 }
